@@ -115,6 +115,7 @@ static int c_cpu_curve_period = 86400; /* seconds */
 static int c_cpu_curve_peak = 60 * 60 * 13; /* 1PM local time */
 
 static int c_cpu_util_l = 50, c_cpu_util_h = 50; /* percent */
+static char *c_cpu_util_file = NULL;
 static size_t c_mem_util = 0; /* bytes */
 static long c_mem_stir_sleep = 1000; /* 1000 usec / 1 ms */
 static off_t c_disk_util = 0; /* MB */
@@ -513,6 +514,8 @@ static void cpu_spin_calibrate(int util, uint64_t *busycount, suseconds_t *sleep
             getpid(), util, *busycount, *sleeptime);
 }
 
+static double cpu_spin_read_util_file(double fallback);
+
 static double cpu_spin_compute_util(enum cpu_util_mode mode, int l, int h,
                                     time_t curtime)
 {
@@ -530,7 +533,7 @@ static double cpu_spin_compute_util(enum cpu_util_mode mode, int l, int h,
         time_offset += c_cpu_curve_peak;
     }
 
-    if (mode == UTIL_MODE_FIXED) return l;
+    if (mode == UTIL_MODE_FIXED) return cpu_spin_read_util_file(l);
     if (mode == UTIL_MODE_CURVE) {
         if (curtime == 0)
             curtime = time(NULL);
@@ -548,10 +551,35 @@ static double cpu_spin_compute_util(enum cpu_util_mode mode, int l, int h,
          */
         double level = (double)l +
             (double)(h - l) * (cos(fraction * PI * 2) + 1)/2;
-        return level;
+        return cpu_spin_read_util_file(level);
     }
     /* shouldn't get here */
     return -1;
+}
+
+static double cpu_spin_read_util_file(double fallback)
+{
+    FILE *file;
+    double value;
+
+    if (c_cpu_util_file == NULL)
+        return fallback;
+
+    file = fopen(c_cpu_util_file, "r");
+    if (file == NULL)
+        return fallback;
+
+    if (fscanf(file, "%lf", &value) != 1) {
+        fclose(file);
+        return fallback;
+    }
+    fclose(file);
+
+    if (value < 0)
+        return 0;
+    if (value > 100)
+        return 100;
+    return value;
 }
 
 static void cpu_spin(long long ncpus, long long util_l, long long util_h, void *dummy, void *dummy2)
@@ -874,6 +902,8 @@ static void usage()
 "  -c, --cpu-util=PCT,  Desired utilization of each CPU, in percent (default\n"
 "      --cpu-util=RANGE   50%).  If 'curve' CPU usage mode is chosen, a range\n"
 "                         of the form MIN-MAX should be given.\n"
+"      --cpu-util-file=PATH\n"
+"                       Read desired CPU utilization percentage from PATH.\n"
 "  -n, --ncpus=NUM      Number of CPUs to keep busy (default: autodetected)\n"
 "  -r, --cpu-mode=MODE  Utilization mode ('fixed' or 'curve', see lookbusy(1))\n"
 "  -p, --cpu-curve-peak=TIME\n"
@@ -905,6 +935,7 @@ int main(int argc, char **argv)
 {
     int c;
     size_t disk_paths_cap = 0;
+    enum { OPT_CPU_UTIL_FILE = 1000 };
 
     static const struct option long_options[] = {
         { "help", 0, NULL, 'h' },
@@ -913,6 +944,7 @@ int main(int argc, char **argv)
         { "version", 0, NULL, 'V' },
 
         { "cpu-util", 1, NULL, 'c' },
+        { "cpu-util-file", 1, NULL, OPT_CPU_UTIL_FILE },
         { "cpu-mode", 1, NULL, 'r' },
         { "ncpus", 1, NULL, 'n' },
         { "cpu-curve-peak", 1, NULL, 'p' },
@@ -935,6 +967,9 @@ int main(int argc, char **argv)
         switch (c) {
             default:
             case 'h': usage(); break;
+            case OPT_CPU_UTIL_FILE:
+                c_cpu_util_file = strdup(optarg);
+                break;
             case 'b':
                 if (parse_size(optarg, &c_disk_churn_block_size) < 0) {
                     err("Couldn't parse disk block size '%s'\n", optarg);
@@ -1073,7 +1108,7 @@ int main(int argc, char **argv)
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT, sigterm_handler);
 
-    if (ncpus != 0 && c_cpu_util_h != 0) {
+    if (ncpus != 0 && (c_cpu_util_h != 0 || c_cpu_util_file != NULL)) {
         cpu_pids = start_cpu_spinners(&ncpus, c_cpu_util_l, c_cpu_util_h); // forks
         n_cpu_pids = ncpus;
     }
