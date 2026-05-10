@@ -515,6 +515,8 @@ static void cpu_spin_calibrate(int util, uint64_t *busycount, suseconds_t *sleep
 }
 
 static double cpu_spin_read_util_file(double fallback);
+static long long now_usec(void);
+static void cpu_spin_controlled_by_file(void);
 
 static double cpu_spin_compute_util(enum cpu_util_mode mode, int l, int h,
                                     time_t curtime)
@@ -582,6 +584,35 @@ static double cpu_spin_read_util_file(double fallback)
     return value;
 }
 
+static long long now_usec(void)
+{
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == -1) shutdown();
+    return (long long)tv.tv_sec * 1000000LL + tv.tv_usec;
+}
+
+static void cpu_spin_controlled_by_file(void)
+{
+    const long long interval_usec = 100000LL;
+
+    say(2, "cpu_spin (%d): using external utilization control file\n", getpid());
+    while (1) {
+        double util = cpu_spin_read_util_file(0);
+        long long interval_start = now_usec();
+        long long busy_until = interval_start + (long long)(interval_usec * util / 100.0);
+        long long interval_end = interval_start + interval_usec;
+        long long counter = 0;
+
+        while (now_usec() < busy_until) {
+            squander_time(counter++);
+        }
+
+        long long remaining = interval_end - now_usec();
+        if (remaining > 0)
+            usleep(remaining);
+    }
+}
+
 static void cpu_spin(long long ncpus, long long util_l, long long util_h, void *dummy, void *dummy2)
 {
     uint64_t busycount;
@@ -591,6 +622,11 @@ static void cpu_spin(long long ncpus, long long util_l, long long util_h, void *
     double util;
     int64_t adjust = 0;
         
+    if (c_cpu_util_file != NULL) {
+        cpu_spin_controlled_by_file();
+        _exit(1);
+    }
+
     util = cpu_spin_compute_util(c_cpu_util_mode, util_l, util_h, 0);
 
     cpu_spin_calibrate(util, &busycount, &sleeptime);
