@@ -593,7 +593,7 @@ static long long now_usec(void)
 
 static void cpu_spin_controlled_by_file(void)
 {
-    const long long interval_usec = 10000LL;
+    const long long interval_usec = 100000LL;
 
     say(2, "cpu_spin (%d): using external utilization control file\n", getpid());
     while (1) {

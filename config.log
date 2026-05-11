@@ -27,8 +27,8 @@ uname -v = #23~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue Apr 14 16:11:48 UTC 2
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
-PATH: /home/damaoooo/.codex/tmp/arg0/codex-arg0csboG0
-PATH: /home/damaoooo/.vscode-server/cli/servers/Stable-8b640eef5a6c6089c029249d48efa5c99adf7d51/server/bin/remote-cli
+PATH: /home/damaoooo/.codex/tmp/arg0/codex-arg00GqbZd
+PATH: /home/damaoooo/n/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/path
 PATH: /usr/local/cuda/bin
 PATH: /home/damaoooo/.local/bin
 PATH: /home/damaoooo/miniconda3/condabin
@@ -42,7 +42,6 @@ PATH: /usr/games
 PATH: /usr/local/games
 PATH: /snap/bin
 PATH: /home/damaoooo/n/bin
-PATH: /home/damaoooo/.vscode-server/extensions/openai.chatgpt-26.506.31421-linux-x64/bin/linux-x86_64
 
 
 ## ----------- ##
@@ -722,7 +721,7 @@ configure:4781: $? = 0
 configure:4781: result: yes
 configure:4787: checking for _doprnt
 configure:4787: gcc -o conftest -g -O2   conftest.c  >&5
-/usr/bin/ld: /tmp/cclQEFXR.o: in function `main':
+/usr/bin/ld: /tmp/ccTLvXuD.o: in function `main':
 /home/damaoooo/playground/burner/third_party/lookbusy/conftest.c:74:(.text.startup+0xb): undefined reference to `_doprnt'
 collect2: error: ld returned 1 exit status
 configure:4787: $? = 1
