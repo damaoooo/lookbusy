@@ -79,6 +79,14 @@ static const char *copyright =
 #include <stdarg.h>
 #include <math.h>
 
+#ifndef BURNER_CONTROL_INTERVAL_MS
+#define BURNER_CONTROL_INTERVAL_MS 100
+#endif
+
+#if BURNER_CONTROL_INTERVAL_MS < 10 || BURNER_CONTROL_INTERVAL_MS > 1000
+#error "BURNER_CONTROL_INTERVAL_MS must be between 10 and 1000"
+#endif
+
 #ifndef HAVE_STRTOL
 #define strtol(x,e,b) atol(x)
 #endif
@@ -593,7 +601,7 @@ static long long now_usec(void)
 
 static void cpu_spin_controlled_by_file(void)
 {
-    const long long interval_usec = 100000LL;
+    const long long interval_usec = (long long)BURNER_CONTROL_INTERVAL_MS * 1000LL;
 
     say(2, "cpu_spin (%d): using external utilization control file\n", getpid());
     while (1) {
